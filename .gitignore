@@ -6,3 +6,5 @@ logs/
 venv
 tutorial.duckdb
 .user.yml
+tmp*
+__pycache__

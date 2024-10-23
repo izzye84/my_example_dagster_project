@@ -1,6 +1,7 @@
 locations:
-- build:
-    directory: ./my_example_dagster_project
+- location_name: my_dagster_code_location
   code_source:
-    module_name: my_example_dagster_project.definitions
-  location_name: my_example_dagster_project
+    module_name: my_dagster_code_location.definitions
+  build:
+    directory: ./
+    registry: 764506304434.dkr.ecr.us-west-2.amazonaws.com/izzy-hybrid-test

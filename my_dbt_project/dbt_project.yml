@@ -1,9 +1,9 @@
-name: 'jaffle_shop'
+name: 'my_dbt_project'
 
 config-version: 2
 version: '0.1'
 
-profile: 'jaffle_shop'
+profile: 'my_dbt_project'
 
 model-paths: ["models"]
 seed-paths: ["seeds"]
@@ -20,7 +20,7 @@ clean-targets:
 require-dbt-version: [">=1.0.0", "<2.0.0"]
 
 models:
-  jaffle_shop:
+  my_dbt_project:
       materialized: table
       staging:
         materialized: view
