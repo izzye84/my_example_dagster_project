@@ -1,4 +1,4 @@
-jaffle_shop:
+my_dbt_project:
   target: dev
   outputs:
     dev:
