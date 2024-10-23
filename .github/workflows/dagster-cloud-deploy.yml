@@ -93,7 +93,7 @@ jobs:
         run: |
           python -m pip install pip --upgrade
           pip install . --upgrade --upgrade-strategy eager                                            ## Install the Python dependencies from the setup.py file, ex: dbt-core and dbt-duckdb
-          dagster-dbt project prepare-and-package --file <DAGSTER_PROJECT_FOLDER>/project.py          ## Replace with the project.py location in the Dagster project folder
+          dagster-dbt project prepare-and-package --file my_dagster_code_location/project.py          ## Replace with the project.py location in the Dagster project folder
         shell: bash      
 
       # Build the "my_dagster_code_location".
