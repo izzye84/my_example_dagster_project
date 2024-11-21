@@ -20,19 +20,15 @@ env:
   DAGSTER_PROJECT_DIR: "."
   # Path to dagster_cloud.yaml relative to DAGSTER_PROJECT_DIR
   DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
-  # The IMAGE_REGISTRY should match the 'registry:'' in dagster_cloud.yaml
-  IMAGE_REGISTRY: "764506304434.dkr.ecr.us-west-2.amazonaws.com/izzy-hybrid-test"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SSH_USER: ${{ secrets.SSH_USER }}
+  SSH_HOST: ${{ secrets.SSH_HOST }}
+  SERVER_IP: ${{ secrets.SERVER_IP }}
+  DAGSTER_PROJECT_PATH: ${{ secrets.DAGSTER_PROJECT_PATH }}
 jobs:
   dagster-cloud-deploy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      # If this is a closed PR the prerun step closes the branch deployment and returns
-      # output.result='skip' which is used to skip other steps in this workflow.
-      - name: Pre-run checks
-        id: prerun
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v0.1
-
       # Checkout the project
       - name: Checkout
         uses: actions/checkout@v3
@@ -48,85 +44,42 @@ jobs:
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
-      # Parse dagster_cloud.yaml, detect if this is branch deployment and initialize the build session
-      - name: Initialize build session
-        id: ci-init
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v0.1
+      # 
+      - name: Install Dagster Cloud CLI
+        run: pip install dagster-cloud
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          project_dir: ${{ env.DAGSTER_PROJECT_DIR }}
-          dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
-          # A full deployment name. If this run is for a pull request, this value will be used as
-          # the base deployment for the branch deployment.
-          deployment: 'prod'
-
-      # Any value can be used as the docker image tag. It is recommended to use a unique value
-      # for each build so that multiple builds do not overwrite each other.
-      - name: Generate docker image tag
-        id: generate-image-tag
-        if: steps.prerun.outputs.result != 'skip'
-        run: echo "IMAGE_TAG=$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> $GITHUB_ENV && echo $IMAGE_TAG
-
-      # Enable buildx for caching
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Building and deploying the docker image requires a login step specific to the container
-      # registry.
-      # Multiple examples are provided below.
-
-      # # AWS ECR
-      # # https://github.com/aws-actions/amazon-ecr-login
-      - name: Configure AWS credentials
-        if: steps.prerun.outputs.result != 'skip'
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:  ${{ secrets.AWS_REGION }}
-
-      - name: Login to ECR
-        if: steps.prerun.outputs.result != 'skip'
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Prepare DBT project for deployment
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      
+          # TODO add logic to conditionally checkout feature branch and create
+          # branch deployment vs checking out prod and creating/updating prod
+      - name: Update Dagster project on the server
         run: |
-          python -m pip install pip --upgrade
-          pip install . --upgrade --upgrade-strategy eager                                            ## Install the Python dependencies from the setup.py file, ex: dbt-core and dbt-duckdb
-          dagster-dbt project prepare-and-package --file my_dagster_code_location/project.py          ## Replace with the project.py location in the Dagster project folder
-        shell: bash      
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            cd ${{ secrets.DAGSTER_PROJECT_PATH }} && || { echo "Failed to change directory"; exit 1; } && \
+            current_branch=$(git rev-parse --abbrev-ref HEAD) || { echo "Failed to get current branch"; exit 1; } && \
+            if [ "$current_branch" != "main" ]; then
+              echo "Switching to main branch..." && \
+              git checkout main || { echo "Failed to checkout main branch"; exit 1; }
+            fi && \
+            git fetch origin || { echo "Failed to fetch from remote"; exit 1; } && \
+            git reset --hard origin/main || { echo "Failed to reset to origin/main"; exit 1; }
+          '
 
-      # Build the "my_dagster_code_location".
-      # For each code location, the "build-push-action" builds the docker
-      # image and a "set-build-output" command records the image tag for each code location.
-      # To re-use the same docker image across multiple code locations, build the docker image once
-      # and specify the same tag in multiple "set-build-output" commands. To use a different docker
-      # image for each code location, use multiple "build-push-actions" with a location specific
-      # tag.
-      - name: Build and upload Docker image for "my_dagster_code_location"
-        if: steps.prerun.outputs.result != 'skip'
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE_REGISTRY }}:${{ env.IMAGE_TAG }}-my_dagster_code_location
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Update build session with image tag for my_dagster_code_location
-        id: ci-set-build-output-example-location
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1
-        with:
-          command: "ci set-build-output --location-name=my_dagster_code_location --image-tag=$IMAGE_TAG-my_dagster_code_location"
-
-      # Deploy all code locations in this build session to Dagster Cloud
-      - name: Deploy to Dagster Cloud
-        id: ci-deploy
-        if: steps.prerun.outputs.result != 'skip'
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v0.1
-        with:
-          command: "ci deploy"
+      - name: Update dbt manifest
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} '
+            cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
+            dagster-dbt project prepare-and-package --file my_dagster_code_location/project.py
+          '
+         
+      - name: Add or Update Dagster Cloud Code Location
+        run: |
+          dagster-cloud workspace add-location my_dagster_code_location \
+            --module-name my_dagster_code_location \
+            --api-token ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}    
 
       # Update a PR comment - this runs always() so the comment is updated on success and failure
       - name: Update PR comment for branch deployments

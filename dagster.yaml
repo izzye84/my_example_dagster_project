@@ -1,0 +1,18 @@
+# ~/dagster_home/dagster.yaml
+
+instance_class:
+  module: dagster_cloud.instance
+  class: DagsterCloudAgentInstance
+
+dagster_cloud_api:
+  agent_token: agent:izzy-hybrid-sandbox:f8993c3decdd4c1cb77ae74e5306c49f
+  deployment: prod
+
+user_code_launcher:
+  module: dagster_cloud.workspace.user_code_launcher
+  class: ProcessUserCodeLauncher
+
+agent_queues:
+  include_default_queue: False # Continue to handle requests for code locations that aren't annotated with a specific queue
+  additional_queues:
+    - local-queue
