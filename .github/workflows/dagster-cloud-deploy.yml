@@ -57,6 +57,7 @@ jobs:
           # branch deployment vs checking out prod and creating/updating prod
       - name: Update Dagster project on the server
         run: |
+          ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'echo "SSH connection successful"'
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && || { echo "Failed to change directory"; exit 1; } && \
             current_branch=$(git rev-parse --abbrev-ref HEAD) || { echo "Failed to get current branch"; exit 1; } && \
