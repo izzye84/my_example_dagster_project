@@ -11,8 +11,3 @@ dagster_cloud_api:
 user_code_launcher:
   module: dagster_cloud.workspace.user_code_launcher
   class: ProcessUserCodeLauncher
-
-agent_queues:
-  include_default_queue: False # Continue to handle requests for code locations that aren't annotated with a specific queue
-  additional_queues:
-    - local-queue
