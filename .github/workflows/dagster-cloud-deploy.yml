@@ -74,7 +74,7 @@ jobs:
 
       - name: Update dbt manifest
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} '
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
             dagster-dbt project prepare-and-package --file my_dagster_code_location/project.py
           '
