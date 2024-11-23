@@ -58,20 +58,18 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -t ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
       
-          # TODO add logic to conditionally checkout feature branch and create
-          # branch deployment vs checking out prod and creating/updating prod
+          
       - name: Update Dagster project on the server
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'echo "SSH connection successful"'
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            cd ${{ secrets.DAGSTER_PROJECT_PATH }} && || { echo "Failed to change directory"; exit 1; } && \
-            current_branch=$(git rev-parse --abbrev-ref HEAD) || { echo "Failed to get current branch"; exit 1; } && \
+            cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
+            current_branch=$(git rev-parse --abbrev-ref HEAD) && \
             if [ "$current_branch" != "main" ]; then
-              echo "Switching to main branch..." && \
-              git checkout main || { echo "Failed to checkout main branch"; exit 1; }
+              git checkout main
             fi && \
-            git fetch origin || { echo "Failed to fetch from remote"; exit 1; } && \
-            git reset --hard origin/main || { echo "Failed to reset to origin/main"; exit 1; }
+            git fetch origin && \
+            git reset --hard origin/main
           '
 
       - name: Update dbt manifest
