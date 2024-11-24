@@ -61,8 +61,7 @@ jobs:
           
       - name: Update Dagster project on the server
         run: |
-          ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'echo "SSH connection successful"'
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+          ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
             current_branch=$(git rev-parse --abbrev-ref HEAD) && \
             if [ "$current_branch" != "main" ]; then
@@ -74,7 +73,7 @@ jobs:
 
       - name: Update dbt manifest
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+          ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
             dagster-dbt project prepare-and-package --file my_dagster_code_location/project.py
           '
