@@ -58,24 +58,35 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -t ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
       
-          
-      - name: Update Dagster project on the server
+      # Activate venv, checkout main branch, pull latest changes, install latest deps
+      - name: Update Dagster project on the local server
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
+
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi && \
+
+            source venv/bin/activate && \
+
             current_branch=$(git rev-parse --abbrev-ref HEAD) && \
             if [ "$current_branch" != "main" ]; then
               git checkout main
             fi && \
-            git fetch origin && \
-            git reset --hard origin/main
-          '
 
+            git fetch origin && \
+            git reset --hard origin/main && \
+
+            pip install --force-reinstall -e .
+          '
+      # run dbt deps and dbt parse to generate up to date manifest.json
       - name: Update dbt manifest
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
-            dagster-dbt project prepare-and-package --file my_dagster_code_location/project.py
+            cd ${{ secrets.DAGSTER_PROJECT_PATH }}/my_dbt_project && \
+            dbt deps && \
+            dbt parse
           '
          
       - name: Add or Update Dagster Cloud Code Location
