@@ -1,0 +1,3 @@
+load_from:
+  - python_module:
+      module_name: my_dagster_code_location.definitions
