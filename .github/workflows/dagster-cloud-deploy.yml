@@ -96,3 +96,4 @@ jobs:
           dagster-cloud workspace add-location my_dagster_code_location \
             --module-name my_dagster_code_location \
             --api-token ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+            --deployment "prod"
