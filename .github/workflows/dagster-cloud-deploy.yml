@@ -75,8 +75,7 @@ jobs:
               git checkout main
             fi && \
 
-            git fetch origin && \
-            git reset --hard origin/main && \
+            git pull && \
 
             pip install --force-reinstall -e .
           '
@@ -95,5 +94,5 @@ jobs:
         run: |
           dagster-cloud workspace add-location my_dagster_code_location \
             --module-name my_dagster_code_location \
-            --api-token ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+            --api-token ${{ secrets.DAGSTER_CLOUD_API_TOKEN }} \
             --deployment "prod"
