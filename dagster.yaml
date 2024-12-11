@@ -11,3 +11,7 @@ dagster_cloud_api:
 user_code_launcher:
   module: dagster_cloud.workspace.user_code_launcher
   class: ProcessUserCodeLauncher
+
+agent_queues:
+  include_default_queue: False
+  additional_queues: [local-agent-queue]
