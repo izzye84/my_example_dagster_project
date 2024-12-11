@@ -68,6 +68,9 @@ jobs:
 
             python3 -m venv "$NEW_VENV" && \
 
+            echo "Virtual environment created at: $(realpath "\$NEW_VENV")"
+            echo "Activating virtual environment from \$NEW_VENV/bin/activate"
+
             source "$NEW_VENV/bin/activate" && \
 
             current_branch=$(git rev-parse --abbrev-ref HEAD) && \
