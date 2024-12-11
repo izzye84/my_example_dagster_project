@@ -28,7 +28,7 @@ env:
   # Path to the root folder of the dagster project on the machine running the local agent
   DAGSTER_PROJECT_PATH: ${{ secrets.DAGSTER_PROJECT_PATH }}
   # Append datetime to venv, so each venv is unique
-  NEW_VENV: "venv_$(date +%Y%m%d_%H%M%S)"
+  NEW_VENV: venv_$(date +%Y%m%d_%H%M%S)
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-22.04
@@ -59,6 +59,12 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -t ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Debug NEW_VENV
+        run: |
+          echo "NEW_VENV is: ${{ env.NEW_VENV }}"
+          echo "Direct env var is: $NEW_VENV"
+          echo "Current date command output is: venv_$(date +%Y%m%d_%H%M%S)"
       
       # Create and activate venv, checkout main branch, pull latest changes, install latest deps
       - name: Update Dagster project on the local server
