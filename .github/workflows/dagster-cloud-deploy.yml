@@ -21,10 +21,14 @@ env:
   # Path to dagster_cloud.yaml relative to DAGSTER_PROJECT_DIR
   DAGSTER_CLOUD_YAML_PATH: "dagster_cloud.yaml"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # SSH variables for authentication with the machine hosting the local agent
   SSH_USER: ${{ secrets.SSH_USER }}
   SSH_HOST: ${{ secrets.SSH_HOST }}
   SERVER_IP: ${{ secrets.SERVER_IP }}
+  # Path to the root folder of the dagster project on the machine running the local agent
   DAGSTER_PROJECT_PATH: ${{ secrets.DAGSTER_PROJECT_PATH }}
+  # Append datetime to venv, so each venv is unique
+  NEW_VENV: venv_$(date +%Y%m%d_%H%M%S)/
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-22.04
@@ -44,31 +48,27 @@ jobs:
         with:
           command: "ci check --project-dir ${{ env.DAGSTER_PROJECT_DIR }} --dagster-cloud-yaml-path ${{ env.DAGSTER_CLOUD_YAML_PATH }}"
 
-      # 
-      - name: Install Dagster Cloud CLI
-        run: pip install dagster-cloud
-
+      # Optional — Use SSH to authenticate with the machine hosting the local agent
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      # Add known host to authenticate via SSH
       - name: Add known host
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -t ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
       
-      # Activate venv, checkout main branch, pull latest changes, install latest deps
+      # Create and activate venv, checkout main branch, pull latest changes, install latest deps
       - name: Update Dagster project on the local server
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
 
-            if [ ! -d "venv" ]; then
-              python3 -m venv venv
-            fi && \
+            python3 -m venv $NEW_VENV && \
 
-            source venv/bin/activate && \
+            source $NEW_VENV/bin/activate && \
 
             current_branch=$(git rev-parse --abbrev-ref HEAD) && \
             if [ "$current_branch" != "main" ]; then
@@ -77,22 +77,27 @@ jobs:
 
             git pull && \
 
-            pip install --force-reinstall -e .
+            pip install -e .
           '
+
       # run dbt deps and dbt parse to generate up to date manifest.json
       - name: Update dbt manifest
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
-            source venv/bin/activate && \
+            source $NEW_VENV/bin/activate && \
             cd my_dbt_project && \
             dbt deps && \
             dbt parse
           '
-         
+
+      # Install Dagster Cloud CLI to push changes to Dagster+
+      - name: Install Dagster Cloud CLI
+        run: pip install dagster-cloud          
+
+      # Push changes to Dagster+
       - name: Add or Update Dagster Cloud Code Location
         run: |
-          dagster-cloud workspace add-location my_dagster_code_location \
-            --module-name my_dagster_code_location \
+          dagster-cloud deployment sync-locations -w dagster_cloud.yaml \
             --api-token ${{ secrets.DAGSTER_CLOUD_API_TOKEN }} \
             --deployment "prod"
