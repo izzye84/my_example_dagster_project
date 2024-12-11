@@ -28,7 +28,7 @@ env:
   # Path to the root folder of the dagster project on the machine running the local agent
   DAGSTER_PROJECT_PATH: ${{ secrets.DAGSTER_PROJECT_PATH }}
   # Append datetime to venv, so each venv is unique
-  NEW_VENV: venv_$(date +%Y%m%d_%H%M%S)
+  NEW_VENV: "venv_$(date +%Y%m%d_%H%M%S)"
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-22.04
