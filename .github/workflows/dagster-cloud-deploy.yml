@@ -27,8 +27,7 @@ env:
   SERVER_IP: ${{ secrets.SERVER_IP }}
   # Path to the root folder of the dagster project on the machine running the local agent
   DAGSTER_PROJECT_PATH: ${{ secrets.DAGSTER_PROJECT_PATH }}
-  # Append datetime to venv, so each venv is unique
-  #NEW_VENV: venv_$(date +%Y%m%d_%H%M%S)
+
 jobs:
   dagster-cloud-deploy:
     runs-on: ubuntu-22.04
@@ -60,13 +59,7 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -t ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      #- name: Debug NEW_VENV
-      #  run: |
-      #    echo "NEW_VENV is: ${{ env.NEW_VENV }}"
-      #    echo "Direct env var is: $NEW_VENV"
-      #    echo "Current date command output is: venv_$(date +%Y%m%d_%H%M%S)"
-
-      # Set the static NEW_VENV variable
+      # Set static venv variable in the format of venv_datetime
       - name: Set static venv variable using datetime
         run: echo "NEW_VENV=venv_$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
 
@@ -75,18 +68,11 @@ jobs:
         run: |
           echo "NEW_VENV is: $NEW_VENV"
       
-      # Create and activate venv, checkout main branch, pull latest changes, install latest deps
+      # Checkout main branch, pull latest changes, create new venv, and install latest deps
       - name: Update Dagster project on the local server
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
-
-            python3 -m venv ${{ env.NEW_VENV }} && \
-
-            echo "Virtual environment created at: $(realpath "\${{ env.NEW_VENV }}")"
-            echo "Activating virtual environment from \${{ env.NEW_VENV }}/bin/activate"
-
-            source ${{ env.NEW_VENV }}/bin/activate && \
 
             current_branch=$(git rev-parse --abbrev-ref HEAD) && \
             if [ "$current_branch" != "main" ]; then
@@ -94,6 +80,10 @@ jobs:
             fi && \
 
             git pull && \
+
+            python3 -m venv ${{ env.NEW_VENV }} && \
+
+            source ${{ env.NEW_VENV }}/bin/activate && \
 
             pip install -e .
           '
@@ -103,7 +93,9 @@ jobs:
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             cd ${{ secrets.DAGSTER_PROJECT_PATH }} && \
-            source $NEW_VENV/bin/activate && \
+            
+            source ${{ env.NEW_VENV }}/bin/activate && \
+
             cd my_dbt_project && \
             dbt deps && \
             dbt parse
