@@ -8,3 +8,4 @@ tutorial.duckdb
 .user.yml
 tmp*
 __pycache__
+*egg*
