@@ -3,7 +3,7 @@ target/
 dbt_modules/
 logs/
 **/.DS_Store
-venv
+venv*
 tutorial.duckdb
 .user.yml
 tmp*
