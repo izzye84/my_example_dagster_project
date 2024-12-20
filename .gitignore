@@ -9,5 +9,4 @@ tutorial.duckdb
 tmp*
 __pycache__
 *egg*
-
 dagster.yaml
