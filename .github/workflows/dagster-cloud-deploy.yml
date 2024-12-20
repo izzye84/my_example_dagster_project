@@ -59,6 +59,10 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -t ed25519 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Debug SSH_HOST format
+        run: |
+          echo ${{ secrets.SSH_HOST }}
+
       # Set static venv variable in the format of venv_datetime
       - name: Set static venv variable using datetime
         run: echo "NEW_VENV=venv_$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
