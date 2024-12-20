@@ -62,11 +62,6 @@ jobs:
       # Set static venv variable in the format of venv_datetime
       - name: Set static venv variable using datetime
         run: echo "NEW_VENV=venv_$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
-
-      # Debug NEW_VENV to confirm it's static
-      - name: Debug NEW_VENV
-        run: |
-          echo "NEW_VENV is: $NEW_VENV"
       
       # Checkout main branch, pull latest changes, create new venv, and install latest deps
       - name: Update Dagster project on the local server
@@ -81,14 +76,20 @@ jobs:
 
             git pull && \
 
-            python3 -m venv ${{ env.NEW_VENV }} && \
+            python3 -m venv venvs/${{ env.NEW_VENV }} && \
 
-            source ${{ env.NEW_VENV }}/bin/activate && \
+            source venvs/${{ env.NEW_VENV }}/bin/activate && \
 
-            pip install -e .
+            pip install -e . && \
+
+            # Update syslink to new venv
+            ln -sfn ${{ env.NEW_VENV }} current_venv
+
+            # Keep last N environments, delete others
+            ls -td venvs/venv* | tail -n +4 | xargs rm -rf
           '
 
-      # run dbt deps and dbt parse to generate up to date manifest.json
+      # run dbt deps and dbt parse to generate up-to-date manifest.json
       - name: Update dbt manifest
         run: |
           ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '

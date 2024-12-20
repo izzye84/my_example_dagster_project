@@ -5,7 +5,7 @@ instance_class:
   class: DagsterCloudAgentInstance
 
 dagster_cloud_api:
-  agent_token: agent:izzy-hybrid-sandbox:f8993c3decdd4c1cb77ae74e5306c49f
+  agent_token: agent:izzy-hybrid-sandbox:88b3551c0f314296a0d95fc0d8d2f889
   deployment: prod
 
 user_code_launcher:
